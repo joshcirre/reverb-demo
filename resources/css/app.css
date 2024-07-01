@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.dot {
+    transition: transform 0.2s;
+}
+
+.translate-x-full {
+    transform: translateX(100%);
+}
