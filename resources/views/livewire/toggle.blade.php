@@ -1,18 +1,22 @@
 <?php
 
-use Livewire\Volt\Component;
-use Livewire\Attributes\On;
-use App\Events\SwitchFlipped;
 use App\Events\MouseMoved;
-use App\Events\UserInactive;
+use App\Events\SwitchFlipped;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Session;
+use Livewire\Attributes\On;
+use Livewire\Volt\Component;
 
 new class extends Component {
     public $toggleSwitch = false;
+
     public $mousePositions = [];
+
     public $userId;
+
     public $userColors = [];
+
+    public $activeUsersCount = 0;
 
     public function mount()
     {
@@ -23,8 +27,14 @@ new class extends Component {
             $this->userId = Session::get('user_id');
         }
 
+        $this->updateActiveUsersCount();
         $this->toggleSwitch = Cache::get('toggleSwitch', false);
         $this->userColors[$this->userId] = $this->generateRandomColor();
+    }
+
+    private function updateActiveUsersCount()
+    {
+        $this->activeUsersCount = count($this->mousePositions) + 1; // +1 for the current user
     }
 
     public function generateRandomColor()
@@ -48,10 +58,15 @@ new class extends Component {
     #[On('echo:mouse-movement,MouseMoved')]
     public function notifyMouseMoved($payload)
     {
-        $this->mousePositions[$payload['userId']] = $payload['position'];
-        if (!isset($this->userColors[$payload['userId']])) {
-            $this->userColors[$payload['userId']] = $this->generateRandomColor();
+        if ($payload['position'] !== null) {
+            $this->mousePositions[$payload['userId']] = $payload['position'];
+            if (!isset($this->userColors[$payload['userId']])) {
+                $this->userColors[$payload['userId']] = $this->generateRandomColor();
+            }
+        } else {
+            unset($this->mousePositions[$payload['userId']]);
         }
+        $this->updateActiveUsersCount();
     }
 
     public function moveMouse($position)
@@ -63,12 +78,12 @@ new class extends Component {
         ];
 
         broadcast(new MouseMoved($payload))->toOthers();
-        $this->mousePositions[$this->userId] = $position;
     }
 
     public function setInactive()
     {
         unset($this->mousePositions[$this->userId]);
+        $this->updateActiveUsersCount();
         broadcast(new MouseMoved(['userId' => $this->userId, 'position' => null]))->toOthers();
     }
 
@@ -79,37 +94,65 @@ new class extends Component {
             ->toArray();
     }
 }; ?>
-<div x-data="{ localToggle: @entangle('toggleSwitch') }">
+<div x-data="{
+    localToggle: @entangle('toggleSwitch'),
+    cursors: @entangle('mousePositions'),
+    smoothCursors: {},
+    init() {
+        this.$watch('cursors', (value) => {
+            this.updateSmoothCursors(value);
+        });
+        this.animateCursors();
+    },
+    updateSmoothCursors(newCursors) {
+        for (let userId in this.smoothCursors) {
+            if (!newCursors[userId]) {
+                delete this.smoothCursors[userId];
+            }
+        }
+        for (let userId in newCursors) {
+            if (!this.smoothCursors[userId] && newCursors[userId]) {
+                this.smoothCursors[userId] = { ...newCursors[userId], active: true };
+            } else if (this.smoothCursors[userId] && newCursors[userId]) {
+                this.smoothCursors[userId].active = true;
+            }
+        }
+    },
+    animateCursors() {
+        for (let userId in this.smoothCursors) {
+            if (this.cursors[userId] && this.smoothCursors[userId].active) {
+                let target = this.cursors[userId];
+                let current = this.smoothCursors[userId];
+
+                current.x += (target.x - current.x) * 0.1;
+                current.y += (target.y - current.y) * 0.1;
+            }
+        }
+        requestAnimationFrame(() => this.animateCursors());
+    }
+}">
     <div class="flex items-center justify-center min-h-screen">
         <label for="toggleSwitch" class="flex items-center cursor-pointer">
             <div class="relative">
                 <input type="checkbox" id="toggleSwitch" class="sr-only" x-model="localToggle"
                     x-on:change="$wire.flipSwitch()">
                 <div class="block h-8 bg-gray-600 rounded-full w-14"></div>
-                <div class="absolute left-1 top-1 w-6 h-6 rounded-full transition-transform duration-200"
+                <div class="absolute w-6 h-6 transition-transform duration-200 rounded-full left-1 top-1"
                     x-bind:class="localToggle ? 'translate-x-full bg-green-400' : 'bg-white'">
                 </div>
             </div>
         </label>
     </div>
 
-
-    @foreach ($this->mousePositions as $userId => $position)
-        @if ($userId !== $this->userId && $position)
-            <div class="cursor-dot"
-                style="left: calc(50% + {{ $position['x'] * 50 }}%);
-                   top: calc(50% + {{ $position['y'] * 50 }}%);
-                   background-color: {{ $this->userColors[$userId] ?? '#000000' }};">
-            </div>
-        @endif
-    @endforeach
-
-
-    <div class="fixed bottom-0 left-0 p-4 text-white bg-black bg-opacity-50">
-        @foreach ($this->mousePositions as $userId => $position)
-            @if ($position)
-                <div>{{ $userId }}: [{{ $position['x'] }}, {{ $position['y'] }}]</div>
-            @endif
-        @endforeach
+    <template x-for="(position, userId) in smoothCursors" :key="userId">
+        <div class="cursor-dot" x-show="position.active"
+            :style="`left: calc(50% + ${position.x * 50}%);
+                                                                                                                                                                                                            top: calc(50% + ${position.y * 50}%);
+                                                                                                                                                                                                            background-color: ${$wire.userColors[userId] || '#000000'};`">
+        </div>
+    </template>
+    <div class="fixed bottom-0 right-0 p-4 text-white bg-black bg-opacity-50 rounded-tl-lg">
+        Active Users: {{ $activeUsersCount }}
     </div>
+
 </div>
