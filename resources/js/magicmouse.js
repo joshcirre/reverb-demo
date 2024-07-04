@@ -44,7 +44,7 @@ const createStar = position => {
     const star = document.createElement("span"),
         color = selectRandom(config.colors);
 
-    star.className = "star fa-solid fa-sparkle";
+    star.className = "star fas fa-star";
 
     star.style.left = px(position.x);
     star.style.top = px(position.y);
@@ -163,7 +163,6 @@ const handleOnMove = e => {
         lastBroadcastPosition = relativePosition;
     }
 }
-
 
 window.onmousemove = e => handleOnMove(e);
 
