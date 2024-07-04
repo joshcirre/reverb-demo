@@ -1,9 +1,3 @@
-const script = document.createElement("script");
-
-script.src = "https://kit.fontawesome.com/1ee8f271b9.js";
-
-document.body.appendChild(script);
-
 let start = new Date().getTime();
 
 const originPosition = { x: 0, y: 0 };
