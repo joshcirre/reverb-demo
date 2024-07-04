@@ -16,10 +16,13 @@ class MouseMoved implements ShouldBroadcastNow
 
     public $position;
 
+    public $color;
+
     public function __construct($payload)
     {
         $this->userId = $payload['userId'];
         $this->position = $payload['position'];
+        $this->color = $payload['color'] ?? null;
     }
 
     public function broadcastOn(): array

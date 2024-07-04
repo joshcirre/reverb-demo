@@ -12,6 +12,7 @@ new class extends Component {
     public $toggleSwitch = false;
     public $mousePositions = [];
     public $userId;
+    public $userColors = [];
 
     public function mount()
     {
@@ -23,6 +24,12 @@ new class extends Component {
         }
 
         $this->toggleSwitch = Cache::get('toggleSwitch', false);
+        $this->userColors[$this->userId] = $this->generateRandomColor();
+    }
+
+    public function generateRandomColor()
+    {
+        return '#' . str_pad(dechex(mt_rand(0, 0xffffff)), 6, '0', STR_PAD_LEFT);
     }
 
     public function flipSwitch()
@@ -43,6 +50,9 @@ new class extends Component {
     public function notifyMouseMoved($payload)
     {
         $this->mousePositions[$payload['userId']] = $payload['position'];
+        if (!isset($this->userColors[$payload['userId']])) {
+            $this->userColors[$payload['userId']] = $this->generateRandomColor();
+        }
     }
 
     public function moveMouse($position)
@@ -50,31 +60,26 @@ new class extends Component {
         $payload = [
             'userId' => $this->userId,
             'position' => $position,
+            'color' => $this->userColors[$this->userId],
         ];
 
         broadcast(new MouseMoved($payload))->toOthers();
-        $this->mousePositions[$this->userId] = [
-            'position' => $position,
-            'timestamp' => time(),
-        ];
+        $this->mousePositions[$this->userId] = $position;
     }
 
     public function setInactive()
     {
-        // Remove this user's position when they become inactive
         unset($this->mousePositions[$this->userId]);
-
-        // Broadcast that this user is now inactive
-        broadcast(new UserInactive($this->userId))->toOthers();
+        broadcast(new MouseMoved(['userId' => $this->userId, 'position' => null]))->toOthers();
     }
 
-    #[On('echo:mouse-movement,UserInactive')]
-    public function removeInactiveUser($userId)
+    public function getMousePositionsProperty()
     {
-        unset($this->mousePositions[$userId]);
+        return collect($this->mousePositions)
+            ->except($this->userId)
+            ->toArray();
     }
 }; ?>
-
 <div>
     <div class="flex items-center justify-center min-h-screen">
         <label for="toggleSwitch" class="flex items-center cursor-pointer">
@@ -89,8 +94,16 @@ new class extends Component {
         </label>
     </div>
 
+    @foreach ($this->mousePositions as $userId => $position)
+        @if ($userId !== $this->userId && $position)
+            <div class="cursor-dot"
+                style="left: {{ $position['x'] }}px; top: {{ $position['y'] }}px; background-color: {{ $this->userColors[$userId] ?? '#000000' }};">
+            </div>
+        @endif
+    @endforeach
+
     <div class="fixed bottom-0 left-0 p-4 text-white bg-black bg-opacity-50">
-        @foreach ($mousePositions as $userId => $position)
+        @foreach ($this->mousePositions as $userId => $position)
             @if ($position)
                 <div>{{ $userId }}: [{{ $position['x'] }}, {{ $position['y'] }}]</div>
             @endif
