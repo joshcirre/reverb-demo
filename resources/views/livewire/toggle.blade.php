@@ -34,7 +34,6 @@ new class extends Component {
 
     public function flipSwitch()
     {
-        $this->toggleSwitch = !$this->toggleSwitch;
         Cache::forever('toggleSwitch', $this->toggleSwitch);
         broadcast(new SwitchFlipped($this->toggleSwitch))->toOthers();
     }
@@ -80,19 +79,20 @@ new class extends Component {
             ->toArray();
     }
 }; ?>
-<div>
+<div x-data="{ localToggle: @entangle('toggleSwitch') }">
     <div class="flex items-center justify-center min-h-screen">
         <label for="toggleSwitch" class="flex items-center cursor-pointer">
             <div class="relative">
-                <input type="checkbox" id="toggleSwitch" class="sr-only" wire:click="flipSwitch"
-                    {{ $toggleSwitch ? 'checked' : '' }}>
+                <input type="checkbox" id="toggleSwitch" class="sr-only" x-model="localToggle"
+                    x-on:change="$wire.flipSwitch()">
                 <div class="block h-8 bg-gray-600 rounded-full w-14"></div>
-                <div
-                    class="absolute left-1 top-1 w-6 h-6 rounded-full transition-transform duration-200 {{ $toggleSwitch ? 'translate-x-full bg-green-400' : 'bg-white' }}">
+                <div class="absolute left-1 top-1 w-6 h-6 rounded-full transition-transform duration-200"
+                    x-bind:class="localToggle ? 'translate-x-full bg-green-400' : 'bg-white'">
                 </div>
             </div>
         </label>
     </div>
+
 
     @foreach ($this->mousePositions as $userId => $position)
         @if ($userId !== $this->userId && $position)
