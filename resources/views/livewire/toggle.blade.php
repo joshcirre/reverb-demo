@@ -97,10 +97,13 @@ new class extends Component {
     @foreach ($this->mousePositions as $userId => $position)
         @if ($userId !== $this->userId && $position)
             <div class="cursor-dot"
-                style="left: {{ $position['x'] }}px; top: {{ $position['y'] }}px; background-color: {{ $this->userColors[$userId] ?? '#000000' }};">
+                style="left: calc(50% + {{ $position['x'] * 50 }}%);
+                   top: calc(50% + {{ $position['y'] * 50 }}%);
+                   background-color: {{ $this->userColors[$userId] ?? '#000000' }};">
             </div>
         @endif
     @endforeach
+
 
     <div class="fixed bottom-0 left-0 p-4 text-white bg-black bg-opacity-50">
         @foreach ($this->mousePositions as $userId => $position)

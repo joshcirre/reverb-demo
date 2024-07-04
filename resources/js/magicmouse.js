@@ -126,35 +126,44 @@ const adjustLastMousePosition = position => {
 };
 let isPageActive = true;
 let lastBroadcastPosition = null;
-
 const handleOnMove = e => {
-    const mousePosition = { x: e.clientX, y: e.clientY }
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const centerX = viewportWidth / 2;
+    const centerY = viewportHeight / 2;
 
-    adjustLastMousePosition(mousePosition);
+    const absolutePosition = { x: e.clientX, y: e.clientY };
+    const relativePosition = {
+        x: (e.clientX - centerX) / (viewportWidth / 2),
+        y: (e.clientY - centerY) / (viewportHeight / 2)
+    };
+
+    adjustLastMousePosition(absolutePosition);
 
     const now = new Date().getTime(),
-        hasMovedFarEnough = calcDistance(last.starPosition, mousePosition) >= config.minimumDistanceBetweenStars,
+        hasMovedFarEnough = calcDistance(last.starPosition, absolutePosition) >= config.minimumDistanceBetweenStars,
         hasBeenLongEnough = calcElapsedTime(last.starTimestamp, now) > config.minimumTimeBetweenStars;
 
     if (hasMovedFarEnough || hasBeenLongEnough) {
-        createStar(mousePosition);
-        updateLastStar(mousePosition);
+        createStar(absolutePosition);
+        updateLastStar(absolutePosition);
     }
 
-    createGlow(last.mousePosition, mousePosition);
-    updateLastMousePosition(mousePosition);
+    createGlow(last.mousePosition, absolutePosition);
+    updateLastMousePosition(absolutePosition);
 
     // Only broadcast if the page is active and the position has changed
     if (isPageActive &&
         (!lastBroadcastPosition ||
-            lastBroadcastPosition.x !== mousePosition.x ||
-            lastBroadcastPosition.y !== mousePosition.y)) {
+            lastBroadcastPosition.x !== relativePosition.x ||
+            lastBroadcastPosition.y !== relativePosition.y)) {
         if (window.Livewire) {
-            window.Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id')).moveMouse(mousePosition);
+            window.Livewire.find(document.querySelector('[wire\\:id]').getAttribute('wire:id')).moveMouse(relativePosition);
         }
-        lastBroadcastPosition = mousePosition;
+        lastBroadcastPosition = relativePosition;
     }
 }
+
 
 window.onmousemove = e => handleOnMove(e);
 
