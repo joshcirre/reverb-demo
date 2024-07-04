@@ -19,6 +19,4 @@
     <livewire:toggle />
 </body>
 
-
-
 </html>
