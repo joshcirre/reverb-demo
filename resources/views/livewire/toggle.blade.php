@@ -98,6 +98,7 @@ new class extends Component {
     localToggle: @entangle('toggleSwitch'),
     cursors: @entangle('mousePositions'),
     smoothCursors: {},
+    cursorSpeed: 0.2,
     init() {
         this.$watch('cursors', (value) => {
             this.updateSmoothCursors(value);
@@ -124,8 +125,8 @@ new class extends Component {
                 let target = this.cursors[userId];
                 let current = this.smoothCursors[userId];
 
-                current.x += (target.x - current.x) * 0.1;
-                current.y += (target.y - current.y) * 0.1;
+                current.x += (target.x - current.x) * this.cursorSpeed;
+                current.y += (target.y - current.y) * this.cursorSpeed;
             }
         }
         requestAnimationFrame(() => this.animateCursors());
@@ -147,8 +148,8 @@ new class extends Component {
     <template x-for="(position, userId) in smoothCursors" :key="userId">
         <div class="cursor-dot" x-show="position.active"
             :style="`left: calc(50% + ${position.x * 50}%);
-                                                                                                                                                                                                            top: calc(50% + ${position.y * 50}%);
-                                                                                                                                                                                                            background-color: ${$wire.userColors[userId] || '#000000'};`">
+                                                                                                                                                                                                                                    top: calc(50% + ${position.y * 50}%);
+                                                                                                                                                                                                                                    background-color: ${$wire.userColors[userId] || '#000000'};`">
         </div>
     </template>
     <div class="fixed bottom-0 right-0 p-4 text-white bg-black bg-opacity-50 rounded-tl-lg">
